@@ -52,8 +52,8 @@ public class MainActivity extends ActionBarActivity
   public static final String DEVICE_NAME = "device_name";
   public static final String TOAST = "toast";
   public static final String HEART_START = "0,0,0,0,0,0,0,0,0,0,10,15,20,15,0,0,0,0,0,-10,30,90,10,-30,0";
-  public static final String GOOD_ST = "0,0,0,0,0,0";
-  public static final String BAD_ST = "30,30,30,30,30,30";
+  public static final String GOOD_ST = "0,0,0,0,0,0,";
+  public static final String BAD_ST = "30,30,30,30,30,30,";
   public static final String HEART_END = "10,15,18,22,25,24,22,18,10,0,0,0,5,0,0,0,0,0";
   
   public BluetoothAdapter mBluetoothAdapter;
@@ -78,7 +78,7 @@ public class MainActivity extends ActionBarActivity
           .add(R.id.container, new PlaceholderFragment()).commit();
     }
 
-    //UIButton = (Button) findViewById(R.id.connect);
+    //UIButton = (Button) findViewById(R.id.sendBadST);
     //UIButton.setBackgroundColor(Color.GREEN);
 
     // Get local Bluetooth adapter
@@ -134,6 +134,8 @@ public class MainActivity extends ActionBarActivity
   public void onDestroy() {
       super.onDestroy();
       // Stop the Bluetooth chat services
+      myTimer.cancel();
+      myTimer.purge();
       if (mChatService != null) mChatService.stop();
       if(D) Log.e(TAG, "--- ON DESTROY ---");
   }
@@ -235,17 +237,16 @@ public class MainActivity extends ActionBarActivity
                   
                 case BluetoothChatService.STATE_CONNECTING:
                   if (D) Log.i(TAG, getString(R.string.title_connecting));
-                  //myTimer.cancel();
+                  stopTimer();
                   break;
                   
                 case BluetoothChatService.STATE_LISTEN:
-                  myTimer.cancel();
-                  myTimer.purge();
+                  if (D) Log.i(TAG, "listening");
+                  stopTimer();
                   break;
 
                 case BluetoothChatService.STATE_NONE:
-                  myTimer.cancel();
-                  myTimer.purge();
+                  stopTimer();
                   if (D) Log.i(TAG, getString(R.string.title_not_connected));
                     //setStatus(R.string.title_not_connected);
                   break;
@@ -326,13 +327,21 @@ public class MainActivity extends ActionBarActivity
   
   public void startTimer() {
     myTimer = new Timer();
-    myTimer.schedule(myTask, 1000, 1000);
+    myTask = new MyTimerTask();
+    myTimer.schedule(myTask, 1000, 3000);
+  }
+  
+  public void stopTimer() {
+    myTimer.cancel();
+    myTimer.purge();
+    myTask.cancel();
   }
 
   
   class MyTimerTask extends TimerTask {
     public void run() {
       String sendString = HEART_START;
+      if(D) Log.i(TAG, "ST is " + badST);
       if (badST) {
         sendString += BAD_ST;
         badST = false;
