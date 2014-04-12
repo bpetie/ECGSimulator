@@ -7,6 +7,7 @@ import java.util.TimerTask;
 import android.support.v7.app.ActionBarActivity;
 import android.support.v7.app.ActionBar;
 import android.support.v4.app.Fragment;
+import android.support.v4.app.FragmentTransaction;
 import android.app.Activity;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
@@ -26,11 +27,13 @@ import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ListView;
+import android.widget.SeekBar;
+import android.widget.SeekBar.OnSeekBarChangeListener;
 import android.widget.TextView;
 import android.widget.Toast;
 import android.os.Build;
 
-public class MainActivity extends ActionBarActivity
+public class MainActivity extends ActionBarActivity implements InterestingEvent
 {
   //Set to false to turn off all debug output
   private static final boolean D = true;
@@ -63,7 +66,9 @@ public class MainActivity extends ActionBarActivity
   private Timer myTimer;
   private MyTimerTask myTask;
   private boolean badST = false;
-  private Button UIButton;
+  private int timerSpeed = 2300;
+  private PlaceholderFragment fragment;
+  
 
 
   @Override
@@ -74,20 +79,21 @@ public class MainActivity extends ActionBarActivity
 
     if( savedInstanceState == null )
     {
-      getSupportFragmentManager().beginTransaction()
-          .add(R.id.container, new PlaceholderFragment()).commit();
+      fragment = new PlaceholderFragment();
+      FragmentTransaction fragmentTransaction = getSupportFragmentManager().beginTransaction();
+      fragmentTransaction.replace(R.id.container, fragment);
+      fragmentTransaction.setTransition(FragmentTransaction.TRANSIT_FRAGMENT_OPEN);
+      fragmentTransaction.commit();
+      fragment.setUpCallBack(this);
     }
-
-    //UIButton = (Button) findViewById(R.id.sendBadST);
-    //UIButton.setBackgroundColor(Color.GREEN);
-
+    
     // Get local Bluetooth adapter
     mBluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
     
     // Timer for sending the data every second
     myTask = new MyTimerTask();
     myTimer = new Timer();
-    
+        
     // If the adapter is null, then Bluetooth is not supported
     if (mBluetoothAdapter == null) {
         Toast.makeText(this, "Bluetooth is not available", Toast.LENGTH_LONG).show();
@@ -125,6 +131,7 @@ public class MainActivity extends ActionBarActivity
           // Only if the state is STATE_NONE, do we know that we haven't started already
           if (mChatService.getState() == BluetoothChatService.STATE_NONE) {
             // Start the Bluetooth chat services
+            if(D) Log.i(TAG, "Going in to restart of chat");
             mChatService.start();
           }
       }
@@ -161,27 +168,6 @@ public class MainActivity extends ActionBarActivity
       return true;
     }
     return super.onOptionsItemSelected(item);
-  }
-
-  
-  /**
-   * A placeholder fragment containing a simple view.
-   */
-  public static class PlaceholderFragment extends Fragment
-  {
-
-    public PlaceholderFragment()
-    {
-    }
-
-    @Override
-    public View onCreateView(LayoutInflater inflater, ViewGroup container,
-        Bundle savedInstanceState)
-    {
-      View rootView = inflater
-          .inflate(R.layout.fragment_main, container, false);
-      return rootView;
-    }
   }
   
   public void onActivityResult(int requestCode, int resultCode, Intent data) {
@@ -305,30 +291,28 @@ public class MainActivity extends ActionBarActivity
     
     badST = !badST;
     if (badST) {
-      //UIButton.setBackgroundColor(Color.RED);
+      fragment.updateSTSegmentButtonColor(Color.RED);
     }
     else {
-      //UIButton.setBackgroundColor(Color.GREEN);
+      fragment.updateSTSegmentButtonColor(Color.GREEN);
     }
-    /*// Launch the DeviceListActivity to see devices and do scan
-    Intent serverIntent = new Intent(this, DeviceListActivity.class);
-    startActivityForResult(serverIntent, REQUEST_CONNECT_DEVICE_SECURE);*/
- 
   }
   
   public void discoverButtonClicked(View v) {
+    startTimer();
+
     if(D) Log.d(TAG, "ensure discoverable");
-    if (mBluetoothAdapter.getScanMode() != BluetoothAdapter.SCAN_MODE_CONNECTABLE_DISCOVERABLE) {
+    /*if (mBluetoothAdapter.getScanMode() != BluetoothAdapter.SCAN_MODE_CONNECTABLE_DISCOVERABLE) {
         Intent discoverableIntent = new Intent(BluetoothAdapter.ACTION_REQUEST_DISCOVERABLE);
         discoverableIntent.putExtra(BluetoothAdapter.EXTRA_DISCOVERABLE_DURATION, 300);
         startActivity(discoverableIntent);
-    }
+    }*/
   }
   
   public void startTimer() {
     myTimer = new Timer();
     myTask = new MyTimerTask();
-    myTimer.schedule(myTask, 1000, 3000);
+    myTimer.schedule(myTask, 200, timerSpeed);
   }
   
   public void stopTimer() {
@@ -340,21 +324,58 @@ public class MainActivity extends ActionBarActivity
   
   class MyTimerTask extends TimerTask {
     public void run() {
-      String sendString = HEART_START;
-      if(D) Log.i(TAG, "ST is " + badST);
-      if (badST) {
-        sendString += BAD_ST;
-        badST = false;
-       // UIButton.setBackgroundColor(Color.GREEN);
-      }
-      else {
-        sendString += GOOD_ST;
-      }
-      sendString += HEART_END; 
       
-      byte[] send = sendString.getBytes();
-      mChatService.write(send);
-      if (D) Log.d(TAG, "Sent data");
+      runOnUiThread(new Runnable() {
+        @Override
+        public void run() {
+            // This code will always run on the UI thread, therefore is safe to modify UI elements.
+          String sendString = HEART_START;
+          if(D) Log.i(TAG, "ST is " + badST);
+          if (badST) {
+            sendString += BAD_ST;
+            badST = false;
+            fragment.updateSTSegmentButtonColor(Color.GREEN);
+          }
+          else {
+            sendString += GOOD_ST;
+          }
+          sendString += HEART_END; 
+          
+          byte[] send = sendString.getBytes();
+          mChatService.write(send);
+          if (D) Log.d(TAG, "Sent data");
+        }
+      });
     }
+  }
+
+  @Override
+  public void sliderChanged(int value)
+  {
+    stopTimer();
+    switch(value) {
+      case 0:
+        timerSpeed = 2300;
+        break;
+
+      case 1:
+        timerSpeed = 1925;
+        break;
+        
+      case 2:
+        timerSpeed = 1550;
+        break;
+        
+      case 3:
+        timerSpeed = 1175;
+        break;
+        
+      case 4:
+        timerSpeed = 800;
+        break;
+    }
+
+    if(D) Log.i(TAG, "Timer speed is " + timerSpeed);
+    startTimer();
   }
 }

@@ -27,5 +27,23 @@
         android:layout_marginTop="65dp"
         android:onClick="connectButtonClicked"
         android:text="Send bad ST" />
+
+	<SeekBar
+		android:id="@+id/seekbar"
+		android:layout_width="wrap_content"
+		android:layout_height="wrap_content"
+		android:layout_below="@+id/sendBadST"
+		android:layout_centerHorizontal="true"
+		android:layout_marginTop="38dp"
+		android:max="4"
+		android:minWidth="250px" />
+
+	<TextView
+		android:id="@+id/textview"
+		android:layout_width="fill_parent"
+		android:layout_height="wrap_content"
+		android:layout_below="@+id/seekbar"
+		android:layout_centerHorizontal="true"
+		android:layout_marginTop="20dp" />
     
 </RelativeLayout>
